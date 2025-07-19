@@ -2,26 +2,26 @@
 <html lang="pt">
 <head>
   <meta charset="UTF-8">
-  <title>Inscrição Sunset JSD</title>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <title>Resgate de Bebida</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
       margin: 0;
       padding: 0;
       background: linear-gradient(135deg, #f3904f, #ff5733);
-      font-family: 'Montserrat', sans-serif;
       color: white;
+      font-family: 'Montserrat', sans-serif;
       display: flex;
-      flex-direction: column;
-      align-items: center;
       justify-content: center;
+      align-items: center;
       height: 100vh;
       text-align: center;
+      flex-direction: column;
       padding: 20px;
     }
 
-    .container {
+    .card {
       background-color: rgba(255, 255, 255, 0.1);
       border-radius: 16px;
       padding: 30px;
@@ -31,76 +31,69 @@
     }
 
     h1 {
-      font-size: 26px;
-      margin-bottom: 10px;
+      font-size: 5vw;
+      margin-bottom: 20px;
     }
 
-    p {
-      font-size: 16px;
-      margin-bottom: 30px;
-    }
-
-    input {
-      padding: 10px;
-      width: 90%;
-      border: none;
-      border-radius: 8px;
-      margin-bottom: 15px;
-      font-size: 14px;
-    }
-
-    button {
-      padding: 12px 30px;
+    .btn {
       background-color: #fff;
       color: #ff5733;
       border: none;
-      border-radius: 8px;
+      padding: 15px 30px;
+      font-size: 4vw;
       font-weight: bold;
-      font-size: 14px;
+      border-radius: 8px;
       cursor: pointer;
+      margin-top: 20px;
+      transition: background-color 0.3s;
     }
 
-    #qr {
+    .btn:hover {
+      background-color: #f0f0f0;
+    }
+
+    .resgatado {
+      font-size: 4.5vw;
+      font-weight: bold;
+      color: #fff;
       margin-top: 20px;
+    }
+
+    img {
+      width: 30vw;
+      max-width: 120px;
+      margin-bottom: 20px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/3/33/Logo_JSD.png" alt="Logo JSD" style="width: 100px; margin-bottom: 20px;">
-    <h1>Inscrição Sunset JSD 🌅</h1>
-    <p>Garante já a tua bebida grátis! Válido para as primeiras 60 pessoas.</p>
-
-    <form id="formulario">
-      <input type="text" id="nome" placeholder="Nome" required><br>
-      <input type="email" id="email" placeholder="Email" required><br>
-      <button type="submit">Gerar QR Code</button>
-    </form>
-
-    <div id="qr" class="hidden">
-      <h2>O teu QR Code</h2>
-      <canvas id="qrcode"></canvas>
-      <p>Guarda esta imagem ou tira print para apresentar no evento.</p>
-    </div>
+  <div class="card" id="card">
+    <img src="images.png" alt="Logo JSD">
+    <h1 id="mensagem">Olá, participante!</h1>
+    <button class="btn" id="btnResgatar">Resgatar bebida</button>
+    <div class="resgatado hidden" id="resgatadoMsg">✔️ Bebida resgatada! Mostra este ecrã ao balcão.</div>
   </div>
 
   <script>
-    const formulario = document.getElementById('formulario');
-    const qrDiv = document.getElementById('qr');
-    const canvas = document.getElementById('qrcode');
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+    const mensagem = document.getElementById('mensagem');
+    const btn = document.getElementById('btnResgatar');
+    const resgatadoMsg = document.getElementById('resgatadoMsg');
 
-    formulario.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const nome = document.getElementById('nome').value;
-      const email = document.getElementById('email').value;
+    const inscritos = JSON.parse(localStorage.getItem('inscritos')) || {};
 
-      const id = btoa(email); // base64 do email como identificador
-      const link = `${location.origin}${location.pathname.replace('index.html', '')}verificar.html?id=${id}`;
+    if (!id || !inscritos[id]) {
+      document.body.innerHTML = '<h1 style="font-size: 6vw;">QR Code inválido ❌</h1>';
+    } else {
+      const nome = inscritos[id].nome;
+      mensagem.innerText = `Olá ${nome}! Clica em "Resgatar bebida" e mostra este ecrã ao balcão.`;
+    }
 
-      QRCode.toCanvas(canvas, link, (error) => {
-        if (error) console.error(error);
-        else qrDiv.classList.remove('hidden');
-      });
+    btn.addEventListener('click', () => {
+      btn.remove();
+      resgatadoMsg.classList.remove('hidden');
+      resgatadoMsg.classList.add('shown');
     });
   </script>
 </body>
