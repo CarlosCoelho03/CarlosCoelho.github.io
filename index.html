@@ -257,10 +257,7 @@
       <button id="downloadBtn">📱 Guardar QR Code</button>
       <button id="testBtn" style="background: rgba(34, 197, 94, 0.3); color: white; margin-top: 10px;">🧪 Testar QR Code</button>
       
-      <div class="debug-section" id="debugSection">
-        <strong>🔧 Info de Debug:</strong><br>
-        <div id="debugInfo"></div>
-      </div>
+  
       
       <p class="instructions">
         💡 <strong>Guarda este QR Code!</strong><br>
@@ -280,7 +277,6 @@
     const testBtn = document.getElementById('testBtn');
     const copyUrlBtn = document.getElementById('copyUrlBtn');
     const urlDisplay = document.getElementById('urlDisplay');
-    const debugInfo = document.getElementById('debugInfo');
 
     let currentQRUrl = '';
 
@@ -389,15 +385,6 @@
         currentQRUrl = verifyUrl;
         console.log('QR URL gerada:', verifyUrl);
 
-        // Mostrar URL e debug info
-        urlDisplay.textContent = verifyUrl;
-        debugInfo.innerHTML = `
-          Nome: ${nome}<br>
-          Email: ${email}<br>
-          Token (20 chars): ${token.substring(0, 20)}...<br>
-          URL Length: ${verifyUrl.length} chars<br>
-          Timestamp: ${new Date().toLocaleString('pt-PT')}
-        `;
 
         // Limpar QR Code anterior
         qrCodeDiv.innerHTML = '';

@@ -397,22 +397,9 @@
           ${userData.usado ? '❌ Já Resgatado' : '🍹 Resgatar Bebida'}
         </button>
         
-        <div class="device-info">
-          <strong>📱 Info do dispositivo:</strong><br>
-          ${deviceInfo.platform} | ${deviceInfo.language}<br>
-          Tela: ${deviceInfo.screen}<br>
-          Verificado: ${deviceInfo.timestamp}
-        </div>
         
         <div id="successSection" class="hidden"></div>
-        
-        <div class="debug-info">
-          <strong>🔧 Debug Token:</strong><br>
-          Versão: ${userData.version || 'N/A'}<br>
-          Token: ${token.substring(0, 20)}...<br>
-          Timestamp: ${userData.timestamp}<br>
-          Usado: ${userData.usado ? 'Sim' : 'Não'}
-        </div>
+     
       `;
 
       // Adicionar evento ao botão se não foi usado
