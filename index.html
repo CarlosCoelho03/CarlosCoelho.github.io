@@ -95,7 +95,7 @@
       inscritos[id] = { nome, email };
       localStorage.setItem('inscritos', JSON.stringify(inscritos));
 
-      const link = `${location.origin}/index.html?id=${id}`;
+      const link = `${location.origin}/verificar.html?id=${id}`;
 
       QRCode.toCanvas(canvas, link, (error) => {
         if (error) console.error(error);
