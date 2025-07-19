@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <title>Verificação de Bebida</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: orange;
+      color: white;
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      text-align: center;
+      flex-direction: column;
+    }
+    img {
+      width: 120px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎉 Tens direito a 1 bebida grátis! 🍹</h1>
+  <img src="https://upload.wikimedia.org/wikipedia/commons/3/33/Logo_JSD.png" alt="Logo JSD">
+  <script>
+    // Aqui poderias validar o ID com uma base de dados se necessário
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+
+    if (!id) {
+      document.body.innerHTML = '<h1>QR Code inválido ❌</h1>';
+    }
+  </script>
+</body>
+</html>
