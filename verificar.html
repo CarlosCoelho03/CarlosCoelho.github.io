@@ -48,6 +48,15 @@
       }
     }
 
+    .loading {
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
     .logo {
       width: clamp(80px, 25vw, 120px);
       height: clamp(80px, 25vw, 120px);
@@ -81,6 +90,7 @@
       font-size: clamp(14px, 4vw, 16px);
       margin-bottom: 15px;
       opacity: 0.9;
+      text-align: left;
     }
 
     .btn {
@@ -116,10 +126,10 @@
     .success-state {
       background: linear-gradient(45deg, #10b981, #059669);
       color: white;
-      animation: pulse 2s infinite;
+      animation: successPulse 2s infinite;
     }
 
-    @keyframes pulse {
+    @keyframes successPulse {
       0%, 100% { transform: scale(1); }
       50% { transform: scale(1.02); }
     }
@@ -130,11 +140,12 @@
       padding: 25px;
       border-radius: 15px;
       margin-top: 20px;
-      animation: successPulse 0.6s ease-out;
+      animation: successBounce 0.6s ease-out;
     }
 
-    @keyframes successPulse {
+    @keyframes successBounce {
       0% { transform: scale(0.8); opacity: 0; }
+      50% { transform: scale(1.05); opacity: 0.8; }
       100% { transform: scale(1); opacity: 1; }
     }
 
@@ -146,7 +157,7 @@
 
     .resgatado p {
       font-size: clamp(14px, 4vw, 16px);
-      margin: 0;
+      margin: 0 0 15px 0;
       line-height: 1.4;
     }
 
@@ -208,6 +219,17 @@
       opacity: 0.8;
     }
 
+    .debug-info {
+      background-color: rgba(255, 255, 255, 0.03);
+      padding: 10px;
+      border-radius: 8px;
+      margin-top: 15px;
+      font-size: 11px;
+      opacity: 0.6;
+      font-family: monospace;
+      word-break: break-all;
+    }
+
     @media (max-width: 480px) {
       .card {
         padding: 30px 20px;
@@ -225,52 +247,100 @@
 </head>
 <body>
   <div class="card" id="mainCard">
-    <div class="logo">🍹</div>
-    <h1 id="mensagem">Carregando...</h1>
-    <div id="content"></div>
+    <div class="logo loading">🍹</div>
+    <h1 id="mensagem">A verificar QR Code...</h1>
+    <div id="content">
+      <div style="text-align: center; opacity: 0.7;">
+        <p>Por favor aguarda...</p>
+      </div>
+    </div>
   </div>
 
   <script>
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
-    const legacyId = params.get('id'); // Para compatibilidade com QR Codes antigos
+    // Obter parâmetros da URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    const legacyId = urlParams.get('id'); // Para compatibilidade com QR Codes antigos
     
     const mensagem = document.getElementById('mensagem');
     const content = document.getElementById('content');
+    const logo = document.querySelector('.logo');
 
-    function showError(errorMsg = 'QR Code inválido ou expirado') {
+    // Debug
+    console.log('🔍 Parâmetros recebidos:');
+    console.log('Token:', token);
+    console.log('Legacy ID:', legacyId);
+    console.log('URL completa:', window.location.href);
+
+    function showError(errorMsg = 'QR Code inválido ou expirado', showTechnical = true) {
+      logo.classList.remove('loading');
+      logo.textContent = '❌';
+      
+      let debugHtml = '';
+      if (showTechnical) {
+        debugHtml = `
+          <div class="device-info">
+            <strong>Info técnica:</strong><br>
+            Token: ${token ? (token.length > 30 ? token.substring(0, 30) + '...' : token) : 'Nenhum'}<br>
+            Legacy ID: ${legacyId || 'Nenhum'}<br>
+            User Agent: ${navigator.userAgent.substring(0, 60)}...<br>
+            Timestamp: ${new Date().toLocaleString('pt-PT')}
+          </div>
+        `;
+      }
+
       document.body.innerHTML = `
         <div class="card error-state">
           <div class="logo">❌</div>
           <h1>QR Code Inválido</h1>
           <p>${errorMsg}</p>
-          <p>Por favor, gera um novo QR Code ou verifica se não foi modificado.</p>
-          <button class="btn back-btn" onclick="window.location.href='index.html'">
+          <p>Por favor, gera um novo QR Code ou verifica se o link não foi modificado.</p>
+          <button class="btn back-btn" onclick="goToGenerator()">
             🏠 Gerar Novo QR Code
           </button>
-          <div class="device-info">
-            <strong>Info técnica:</strong><br>
-            Token: ${token ? token.substring(0, 20) + '...' : 'Nenhum'}<br>
-            User Agent: ${navigator.userAgent.substring(0, 50)}...
-          </div>
+          ${debugHtml}
         </div>
       `;
     }
 
-    function decodeUserData(token) {
+    function goToGenerator() {
       try {
+        // Tentar voltar para index.html na mesma pasta
+        const currentUrl = window.location.href;
+        const baseUrl = currentUrl.split('?')[0].replace('verificar.html', 'index.html');
+        window.location.href = baseUrl;
+      } catch (e) {
+        // Fallback
+        window.location.href = 'index.html';
+      }
+    }
+
+    function decodeUserData(token) {
+      console.log('🔧 A tentar decodificar token...');
+      try {
+        // CORREÇÃO: Ordem correta - primeiro decodeURIComponent, depois atob
         const decoded = atob(token);
-        const jsonString = decodeURIComponent(decoded);
-        const userData = JSON.parse(jsonString);
+        console.log('✅ Token decodificado (base64):', decoded);
+        
+        // Parse JSON - o decodeURIComponent já foi feito no index.html
+        const userData = JSON.parse(decoded);
+        console.log('✅ Dados parseados:', userData);
         
         // Verificar se tem os campos necessários
         if (!userData.nome || !userData.email || !userData.timestamp) {
-          throw new Error('Dados inválidos no token');
+          throw new Error('Dados inválidos no token - campos obrigatórios em falta');
+        }
+        
+        // Verificar se não é muito antigo (por exemplo, 30 dias)
+        const ageDays = (Date.now() - userData.timestamp) / (1000 * 60 * 60 * 24);
+        if (ageDays > 30) {
+          throw new Error('Token expirado (mais de 30 dias)');
         }
         
         return userData;
       } catch (error) {
-        console.error('Erro ao decodificar token:', error);
+        console.error('❌ Erro ao decodificar token:', error);
+        console.error('Token original:', token);
         return null;
       }
     }
@@ -310,6 +380,9 @@
     }
 
     function showValidUser(userData) {
+      // Remover animação de loading
+      logo.classList.remove('loading');
+      
       const isUsed = checkIfUsed(userData.email);
       
       mensagem.innerHTML = `Olá ${userData.nome}! 👋`;
@@ -342,7 +415,7 @@
           <div class="resgatado">
             <h2>✅ Bebida Já Resgatada!</h2>
             <p>Esta bebida já foi utilizada anteriormente neste dispositivo.</p>
-            <p><small>Se achás que isto é um erro, fala connosco no evento.</small></p>
+            <p><small>Se achas que isto é um erro, fala connosco no evento.</small></p>
           </div>
         `}
       `;
@@ -376,7 +449,7 @@
             </div>
           </div>
           
-          <button class="btn back-btn" onclick="window.location.href='index.html'" style="margin-top: 20px;">
+          <button class="btn back-btn" onclick="goToGenerator()" style="margin-top: 20px;">
             🏠 Voltar ao Início
           </button>
         `;
@@ -401,30 +474,47 @@
       return null;
     }
 
-    // Processar o QR Code
-    console.log('Token recebido:', token);
-    console.log('Legacy ID:', legacyId);
+    // Processar o QR Code - MAIN LOGIC
+    setTimeout(() => {
+      console.log('🚀 Iniciando processamento...');
+      console.log('Token recebido:', token);
+      console.log('Legacy ID:', legacyId);
 
-    if (token) {
-      // Novo sistema baseado em token
-      const userData = decodeUserData(token);
-      if (userData) {
-        console.log('Dados decodificados:', userData);
-        showValidUser(userData);
+      if (token) {
+        // Novo sistema baseado em token
+        console.log('📋 Processando token...');
+        const userData = decodeUserData(token);
+        if (userData) {
+          console.log('✅ Dados decodificados com sucesso:', userData);
+          showValidUser(userData);
+        } else {
+          console.log('❌ Falha na decodificação do token');
+          showError('Erro ao processar os dados do QR Code');
+        }
+      } else if (legacyId) {
+        // Sistema antigo para compatibilidade
+        console.log('📋 Processando Legacy ID...');
+        const userData = handleLegacyId(legacyId);
+        if (userData) {
+          console.log('✅ Dados legacy encontrados:', userData);
+          showValidUser(userData);
+        } else {
+          console.log('❌ Legacy ID não encontrado');
+          showError('QR Code antigo não encontrado neste dispositivo');
+        }
       } else {
-        showError('Erro ao processar os dados do QR Code');
+        console.log('❌ Nenhum parâmetro válido encontrado');
+        showError('Nenhum código válido fornecido');
       }
-    } else if (legacyId) {
-      // Sistema antigo para compatibilidade
-      const userData = handleLegacyId(legacyId);
-      if (userData) {
-        showValidUser(userData);
-      } else {
-        showError('QR Code antigo não encontrado neste dispositivo');
-      }
-    } else {
-      showError('Nenhum código válido fornecido');
-    }
+    }, 1000); // Delay de 1 segundo para mostrar o loading
+
+    // Log de debug inicial
+    console.log('🔧 Sistema de verificação JSD carregado');
+    console.log('📊 URL atual:', window.location.href);
+    console.log('🆔 Parâmetros URL:', {
+      token: token ? `${token.substring(0, 20)}...` : null,
+      legacyId: legacyId
+    });
   </script>
 </body>
 </html>
