@@ -244,7 +244,15 @@
           <div class="logo">❌</div>
           <h1>QR Code Inválido</h1>
           <p>Este QR Code não é válido ou pode ter expirado.</p>
-          <p>Por favor, verifica o código ou gera um novo.</p>
+          <p><strong>ID procurado:</strong> ${id || 'Nenhum'}</p>
+          <p><strong>Participantes registados:</strong> ${Object.keys(participantes).length}</p>
+          <details style="margin: 20px 0; text-align: left;">
+            <summary>🔍 Debug Info (clica para ver)</summary>
+            <pre style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; font-size: 12px; overflow-x: auto;">
+ID: ${id}
+IDs disponíveis: ${JSON.stringify(Object.keys(participantes), null, 2)}
+            </pre>
+          </details>
           <button class="btn back-btn" onclick="window.location.href='index.html'">
             🏠 Voltar ao Início
           </button>
@@ -348,10 +356,19 @@
     }
 
     // Verificar se o ID existe e é válido
-    if (!id || !participantes[id]) {
+    console.log('ID recebido:', id);
+    console.log('Todos os participantes:', participantes);
+    
+    if (!id) {
+      console.log('Nenhum ID fornecido');
+      showError();
+    } else if (!participantes[id]) {
+      console.log('ID não encontrado nos participantes');
+      console.log('IDs disponíveis:', Object.keys(participantes));
       showError();
     } else {
       const userData = participantes[id];
+      console.log('Utilizador encontrado:', userData);
       showValidUser(userData);
     }
 
