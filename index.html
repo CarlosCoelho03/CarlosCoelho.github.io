@@ -206,6 +206,15 @@
       margin: 5px;
     }
 
+    .debug-section {
+      background-color: rgba(0, 0, 0, 0.1);
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 20px;
+      font-size: 12px;
+      font-family: monospace;
+    }
+
     @media (max-width: 480px) {
       .card {
         padding: 30px 20px;
@@ -248,6 +257,11 @@
       <button id="downloadBtn">📱 Guardar QR Code</button>
       <button id="testBtn" style="background: rgba(34, 197, 94, 0.3); color: white; margin-top: 10px;">🧪 Testar QR Code</button>
       
+      <div class="debug-section" id="debugSection">
+        <strong>🔧 Info de Debug:</strong><br>
+        <div id="debugInfo"></div>
+      </div>
+      
       <p class="instructions">
         💡 <strong>Guarda este QR Code!</strong><br>
         Mostra-o no evento para resgatar a tua bebida grátis.<br>
@@ -266,6 +280,7 @@
     const testBtn = document.getElementById('testBtn');
     const copyUrlBtn = document.getElementById('copyUrlBtn');
     const urlDisplay = document.getElementById('urlDisplay');
+    const debugInfo = document.getElementById('debugInfo');
 
     let currentQRUrl = '';
 
@@ -285,14 +300,31 @@
         email: email,
         timestamp: Date.now(),
         usado: false,
-        version: '2.0'
+        version: '3.0'
       };
       
       try {
+        // CORREÇÃO: Ordem correta de codificação
         const jsonString = JSON.stringify(userData);
-        const encoded = btoa(encodeURIComponent(jsonString));
-        console.log('Dados codificados:', userData);
-        return encoded;
+        console.log('1. JSON original:', jsonString);
+        
+        // Primeiro encode URI, depois base64
+        const uriEncoded = encodeURIComponent(jsonString);
+        console.log('2. URI encoded:', uriEncoded);
+        
+        const base64Encoded = btoa(uriEncoded);
+        console.log('3. Base64 encoded:', base64Encoded);
+        
+        // Teste de decodificação imediata
+        const testDecoded = decodeURIComponent(atob(base64Encoded));
+        const testParsed = JSON.parse(testDecoded);
+        console.log('4. Teste de decodificação:', testParsed);
+        
+        if (testParsed.nome !== nome || testParsed.email !== email) {
+          throw new Error('Falha no teste de codificação/decodificação');
+        }
+        
+        return base64Encoded;
       } catch (error) {
         console.error('Erro ao codificar dados:', error);
         throw error;
@@ -300,13 +332,12 @@
     }
 
     function getBaseUrl() {
-      // Método mais robusto para obter a URL base
       const protocol = window.location.protocol;
       const host = window.location.host;
       const pathname = window.location.pathname;
       
-      // Remove index.html se existir
-      const basePath = pathname.replace(/\/[^\/]*\.html.*$/, '');
+      // Remove o ficheiro atual e fica só com o diretório
+      const basePath = pathname.replace(/\/[^\/]*$/, '');
       const baseUrl = `${protocol}//${host}${basePath}`;
       
       console.log('Base URL detectada:', baseUrl);
@@ -333,21 +364,11 @@
       submitBtn.disabled = true;
       submitBtn.textContent = '⏳ A gerar...';
 
-      // Pequeno delay para melhor UX
       setTimeout(() => {
         try {
           const token = encodeUserData(nome, email);
-          generateQRCode(token);
+          generateQRCode(token, nome, email);
           showMessage('✅ QR Code gerado com sucesso!', 'success');
-          
-          // Guardar localmente para histórico (opcional)
-          try {
-            let participantes = JSON.parse(localStorage.getItem('jsd_participantes') || '{}');
-            participantes[email] = { nome, email, timestamp: Date.now(), usado: false };
-            localStorage.setItem('jsd_participantes', JSON.stringify(participantes));
-          } catch (e) {
-            console.log('LocalStorage não disponível, mas QR Code funciona na mesma!');
-          }
           
         } catch (error) {
           console.error('Erro:', error);
@@ -359,16 +380,24 @@
       }, 500);
     });
 
-    function generateQRCode(token) {
+    function generateQRCode(token, nome, email) {
       try {
         const baseUrl = getBaseUrl();
-        const verifyUrl = `${baseUrl}/verificar.html?token=${encodeURIComponent(token)}`;
+        // Usar nome do arquivo de verificação explícito
+        const verifyUrl = `${baseUrl}/verificar.html?token=${token}`;
         
         currentQRUrl = verifyUrl;
         console.log('QR URL gerada:', verifyUrl);
 
-        // Mostrar URL para debug
+        // Mostrar URL e debug info
         urlDisplay.textContent = verifyUrl;
+        debugInfo.innerHTML = `
+          Nome: ${nome}<br>
+          Email: ${email}<br>
+          Token (20 chars): ${token.substring(0, 20)}...<br>
+          URL Length: ${verifyUrl.length} chars<br>
+          Timestamp: ${new Date().toLocaleString('pt-PT')}
+        `;
 
         // Limpar QR Code anterior
         qrCodeDiv.innerHTML = '';
@@ -380,7 +409,7 @@
           size: 300,
           background: 'white',
           foreground: '#ff5733',
-          level: 'H', // Maior nível de correção de erro
+          level: 'H',
           padding: 20
         });
 
@@ -405,7 +434,6 @@
           await navigator.clipboard.writeText(currentQRUrl);
           showMessage('📋 Link copiado!', 'success');
         } else {
-          // Fallback para dispositivos mais antigos
           const textArea = document.createElement('textarea');
           textArea.value = currentQRUrl;
           document.body.appendChild(textArea);
@@ -444,11 +472,9 @@
         console.log('A testar URL:', currentQRUrl);
         showMessage('🧪 A abrir página de teste...', 'success');
         
-        // Tentar abrir em nova aba
         const newWindow = window.open(currentQRUrl, '_blank');
         
         if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
-          // Se popup foi bloqueado, mostrar URL
           showMessage('⚠️ Pop-up bloqueado. Copia o link acima e abre numa nova aba.', 'error');
         }
       } else {
@@ -456,8 +482,7 @@
       }
     });
 
-    // Log de debug
-    console.log('Sistema QR JSD carregado - Versão Melhorada 2.0!');
+    console.log('Sistema QR JSD carregado - Versão Corrigida 3.0!');
     console.log('URL atual:', window.location.href);
     console.log('Base URL que será usada:', getBaseUrl());
   </script>

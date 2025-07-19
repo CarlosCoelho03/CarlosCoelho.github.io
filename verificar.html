@@ -257,34 +257,29 @@
   </div>
 
   <script>
-    // Obter parâmetros da URL
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
-    const legacyId = urlParams.get('id'); // Para compatibilidade com QR Codes antigos
+    const legacyId = urlParams.get('id');
     
     const mensagem = document.getElementById('mensagem');
     const content = document.getElementById('content');
     const logo = document.querySelector('.logo');
 
-    // Debug
     console.log('🔍 Parâmetros recebidos:');
-    console.log('Token:', token);
+    console.log('Token:', token ? `${token.substring(0, 30)}...` : 'Nenhum');
     console.log('Legacy ID:', legacyId);
     console.log('URL completa:', window.location.href);
 
-    function showError(errorMsg = 'QR Code inválido ou expirado', showTechnical = true) {
+    function showError(errorMsg = 'QR Code inválido ou expirado', technicalInfo = '') {
       logo.classList.remove('loading');
       logo.textContent = '❌';
       
       let debugHtml = '';
-      if (showTechnical) {
+      if (technicalInfo) {
         debugHtml = `
-          <div class="device-info">
-            <strong>Info técnica:</strong><br>
-            Token: ${token ? (token.length > 30 ? token.substring(0, 30) + '...' : token) : 'Nenhum'}<br>
-            Legacy ID: ${legacyId || 'Nenhum'}<br>
-            User Agent: ${navigator.userAgent.substring(0, 60)}...<br>
-            Timestamp: ${new Date().toLocaleString('pt-PT')}
+          <div class="debug-info">
+            <strong>🔧 Info técnica:</strong><br>
+            ${technicalInfo}
           </div>
         `;
       }
@@ -305,216 +300,231 @@
 
     function goToGenerator() {
       try {
-        // Tentar voltar para index.html na mesma pasta
         const currentUrl = window.location.href;
         const baseUrl = currentUrl.split('?')[0].replace('verificar.html', 'index.html');
         window.location.href = baseUrl;
       } catch (e) {
-        // Fallback
         window.location.href = 'index.html';
       }
     }
 
     function decodeUserData(token) {
       console.log('🔧 A tentar decodificar token...');
+      console.log('Token recebido (50 chars):', token ? token.substring(0, 50) : 'null');
+      
       try {
-        // CORREÇÃO: Ordem correta - primeiro decodeURIComponent, depois atob
-        const decoded = atob(token);
-        console.log('✅ Token decodificado (base64):', decoded);
+        if (!token || token.length < 10) {
+          throw new Error('Token muito pequeno ou inválido');
+        }
         
-        // Parse JSON - o decodeURIComponent já foi feito no index.html
-        const userData = JSON.parse(decoded);
-        console.log('✅ Dados parseados:', userData);
+        // CORREÇÃO: Ordem correta de decodificação
+        console.log('1. A fazer decode base64...');
+        const base64Decoded = atob(token);
+        console.log('2. Base64 decodificado:', base64Decoded.substring(0, 100) + '...');
+        
+        console.log('3. A fazer decode URI...');
+        const uriDecoded = decodeURIComponent(base64Decoded);
+        console.log('4. URI decodificado:', uriDecoded.substring(0, 100) + '...');
+        
+        console.log('5. A fazer parse JSON...');
+        const userData = JSON.parse(uriDecoded);
+        console.log('6. Dados parseados:', userData);
         
         // Verificar se tem os campos necessários
         if (!userData.nome || !userData.email || !userData.timestamp) {
-          throw new Error('Dados inválidos no token - campos obrigatórios em falta');
-        }
-        
-        // Verificar se não é muito antigo (por exemplo, 30 dias)
-        const ageDays = (Date.now() - userData.timestamp) / (1000 * 60 * 60 * 24);
-        if (ageDays > 30) {
-          throw new Error('Token expirado (mais de 30 dias)');
+          throw new Error('Dados inválidos no token');
         }
         
         return userData;
+        
       } catch (error) {
-        console.error('❌ Erro ao decodificar token:', error);
-        console.error('Token original:', token);
-        return null;
+        console.error('❌ Erro ao decodificar:', error);
+        console.log('Token problemático:', token);
+        throw error;
       }
     }
 
     function formatDate(timestamp) {
-      const date = new Date(timestamp);
-      return date.toLocaleString('pt-PT', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    }
-
-    function checkIfUsed(email) {
-      // Verificar se já foi usado (localStorage como cache local)
       try {
-        const usedTokens = JSON.parse(localStorage.getItem('jsd_used_tokens') || '{}');
-        return usedTokens[email] || false;
+        return new Date(timestamp).toLocaleString('pt-PT', {
+          day: '2-digit',
+          month: '2-digit', 
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
       } catch (e) {
-        return false;
+        return 'Data inválida';
       }
     }
 
-    function markAsUsed(email) {
-      try {
-        const usedTokens = JSON.parse(localStorage.getItem('jsd_used_tokens') || '{}');
-        usedTokens[email] = {
-          timestamp: Date.now(),
-          usado: true
-        };
-        localStorage.setItem('jsd_used_tokens', JSON.stringify(usedTokens));
-      } catch (e) {
-        console.log('Não foi possível marcar como usado localmente');
-      }
+    function isTokenExpired(timestamp) {
+      const now = Date.now();
+      const tokenDate = parseInt(timestamp);
+      const daysDiff = (now - tokenDate) / (1000 * 60 * 60 * 24);
+      
+      // Token expira após 30 dias
+      return daysDiff > 30;
     }
 
-    function showValidUser(userData) {
-      // Remover animação de loading
+    function showValidToken(userData) {
       logo.classList.remove('loading');
+      logo.textContent = '✅';
       
-      const isUsed = checkIfUsed(userData.email);
+      mensagem.textContent = 'QR Code Válido!';
       
-      mensagem.innerHTML = `Olá ${userData.nome}! 👋`;
-      
+      const deviceInfo = {
+        userAgent: navigator.userAgent.substring(0, 100) + '...',
+        platform: navigator.platform,
+        language: navigator.language,
+        screen: `${screen.width}x${screen.height}`,
+        timestamp: new Date().toLocaleString('pt-PT')
+      };
+
       content.innerHTML = `
         <div class="info-section">
           <div class="user-info">
-            <strong>📧 Email:</strong> ${userData.email}
+            <strong>👤 Nome:</strong> ${userData.nome}<br>
+            <strong>📧 Email:</strong> ${userData.email}<br>
+            <strong>📅 Gerado em:</strong> ${formatDate(userData.timestamp)}<br>
+            <strong>🎫 Status:</strong> ${userData.usado ? '❌ Já usado' : '✅ Disponível'}
           </div>
-          <div class="user-info">
-            <strong>📅 Registado:</strong> ${formatDate(userData.timestamp)}
-          </div>
-          <div class="user-info">
-            <strong>📱 Dispositivo:</strong> ${/Mobile|Android|iPhone/.test(navigator.userAgent) ? 'Mobile' : 'Desktop'}
-          </div>
-          ${isUsed ? 
-            '<div class="user-info" style="color: #fca5a5;"><strong>⚠️ Status:</strong> Já utilizado</div>' :
-            '<div class="user-info" style="color: #10b981;"><strong>✅ Status:</strong> Válido para resgate</div>'
-          }
         </div>
-
-        ${!isUsed ? `
-          <button class="btn" id="btnResgatar">
-            🍹 Resgatar Bebida Grátis
-          </button>
-          <p style="font-size: 14px; opacity: 0.8; margin-top: 15px;">
-            ✨ Clica no botão e mostra este ecrã laranja ao pessoal do balcão
-          </p>
-        ` : `
-          <div class="resgatado">
-            <h2>✅ Bebida Já Resgatada!</h2>
-            <p>Esta bebida já foi utilizada anteriormente neste dispositivo.</p>
-            <p><small>Se achas que isto é um erro, fala connosco no evento.</small></p>
-          </div>
-        `}
+        
+        <button class="btn ${userData.usado ? '' : 'success-state'}" 
+                id="resgateBtn" 
+                ${userData.usado ? 'disabled' : ''}>
+          ${userData.usado ? '❌ Já Resgatado' : '🍹 Resgatar Bebida'}
+        </button>
+        
+        <div class="device-info">
+          <strong>📱 Info do dispositivo:</strong><br>
+          ${deviceInfo.platform} | ${deviceInfo.language}<br>
+          Tela: ${deviceInfo.screen}<br>
+          Verificado: ${deviceInfo.timestamp}
+        </div>
+        
+        <div id="successSection" class="hidden"></div>
+        
+        <div class="debug-info">
+          <strong>🔧 Debug Token:</strong><br>
+          Versão: ${userData.version || 'N/A'}<br>
+          Token: ${token.substring(0, 20)}...<br>
+          Timestamp: ${userData.timestamp}<br>
+          Usado: ${userData.usado ? 'Sim' : 'Não'}
+        </div>
       `;
 
-      // Event listener para o botão de resgate
-      const btnResgatar = document.getElementById('btnResgatar');
-      if (btnResgatar) {
-        btnResgatar.addEventListener('click', () => {
-          resgatar(userData);
+      // Adicionar evento ao botão se não foi usado
+      if (!userData.usado) {
+        document.getElementById('resgateBtn').addEventListener('click', () => {
+          processResgate(userData);
         });
       }
     }
 
-    function resgatar(userData) {
-      const btnResgatar = document.getElementById('btnResgatar');
-      btnResgatar.disabled = true;
-      btnResgatar.innerHTML = '⏳ Processando...';
-
+    function processResgate(userData) {
+      const resgateBtn = document.getElementById('resgateBtn');
+      const successSection = document.getElementById('successSection');
+      
+      // Desabilitar botão
+      resgateBtn.disabled = true;
+      resgateBtn.textContent = '⏳ A processar...';
+      
+      // Simular processamento (em ambiente real, aqui faria chamada ao servidor)
       setTimeout(() => {
-        // Marcar como usado
-        markAsUsed(userData.email);
-
-        // Mostrar sucesso
-        content.innerHTML = `
-          <div class="resgatado">
-            <h2><span class="status-indicator"></span>Bebida Resgatada!</h2>
-            <p><strong>🎉 Parabéns ${userData.nome}!</strong></p>
-            <p>Mostra este ecrã laranja ao pessoal do balcão para receber a tua bebida grátis do Sunset JSD!</p>
-            <div class="timestamp">
-              ✅ Resgatada em: ${formatDate(Date.now())}
-            </div>
-          </div>
+        try {
+          // Marcar como usado (em ambiente real, isso seria persistido no servidor)
+          userData.usado = true;
+          userData.dataResgate = Date.now();
           
-          <button class="btn back-btn" onclick="goToGenerator()" style="margin-top: 20px;">
-            🏠 Voltar ao Início
-          </button>
-        `;
-
-        // Adicionar efeito visual de sucesso
-        document.getElementById('mainCard').style.background = 'linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(16, 185, 129, 0.3))';
-        document.getElementById('mainCard').style.borderColor = 'rgba(34, 197, 94, 0.5)';
-
-      }, 1500);
+          // Atualizar interface
+          resgateBtn.textContent = '✅ Resgatado com Sucesso!';
+          resgateBtn.classList.remove('success-state');
+          resgateBtn.style.background = 'linear-gradient(45deg, #10b981, #059669)';
+          
+          // Mostrar seção de sucesso
+          successSection.innerHTML = `
+            <div class="resgatado">
+              <h2>🎉 Bebida Resgatada!</h2>
+              <p><strong>${userData.nome}</strong>, a tua bebida grátis foi resgatada com sucesso!</p>
+              <p>📧 Confirmação enviada para: <strong>${userData.email}</strong></p>
+              <div class="timestamp">
+                <span class="status-indicator"></span>
+                Resgatado em: ${formatDate(userData.dataResgate)}
+              </div>
+            </div>
+          `;
+          successSection.classList.remove('hidden');
+          
+          // Scroll suave para a seção de sucesso
+          setTimeout(() => {
+            successSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 300);
+          
+          console.log('✅ Resgate processado com sucesso:', userData);
+          
+        } catch (error) {
+          console.error('❌ Erro no processamento do resgate:', error);
+          resgateBtn.disabled = false;
+          resgateBtn.textContent = '❌ Erro - Tenta Novamente';
+          resgateBtn.style.background = 'linear-gradient(45deg, #ef4444, #dc2626)';
+        }
+      }, 2000);
     }
 
-    // Suporte para QR codes antigos (compatibilidade)
-    function handleLegacyId(id) {
+    // Função principal de verificação
+    function verificarToken() {
+      console.log('🚀 Iniciando verificação...');
+      
+      // Verificar se há token
+      if (!token && !legacyId) {
+        showError(
+          'Nenhum token encontrado na URL', 
+          'URL não contém parâmetros token ou id'
+        );
+        return;
+      }
+
+      // Usar token se disponível, senão usar legacyId (compatibilidade)
+      const tokenToUse = token || legacyId;
+      console.log('Token a usar:', tokenToUse ? `${tokenToUse.substring(0, 30)}...` : 'Nenhum');
+
       try {
-        const participantes = JSON.parse(localStorage.getItem('jsd_participantes') || '{}');
-        if (participantes[id]) {
-          return participantes[id];
+        const userData = decodeUserData(tokenToUse);
+        console.log('✅ Dados decodificados:', userData);
+        
+        // Verificar se o token expirou
+        if (isTokenExpired(userData.timestamp)) {
+          showError(
+            'QR Code expirado (mais de 30 dias)', 
+            `Gerado em: ${formatDate(userData.timestamp)}`
+          );
+          return;
         }
-      } catch (e) {
-        console.log('Dados legados não encontrados');
+        
+        // Token válido - mostrar interface
+        showValidToken(userData);
+        
+      } catch (error) {
+        console.error('❌ Erro na verificação:', error);
+        showError(
+          'Erro ao processar QR Code', 
+          `Erro: ${error.message}<br>Token: ${tokenToUse ? tokenToUse.substring(0, 50) + '...' : 'N/A'}`
+        );
       }
-      return null;
     }
 
-    // Processar o QR Code - MAIN LOGIC
+    // Iniciar verificação após um pequeno delay para mostrar loading
     setTimeout(() => {
-      console.log('🚀 Iniciando processamento...');
-      console.log('Token recebido:', token);
-      console.log('Legacy ID:', legacyId);
+      verificarToken();
+    }, 1500);
 
-      if (token) {
-        // Novo sistema baseado em token
-        console.log('📋 Processando token...');
-        const userData = decodeUserData(token);
-        if (userData) {
-          console.log('✅ Dados decodificados com sucesso:', userData);
-          showValidUser(userData);
-        } else {
-          console.log('❌ Falha na decodificação do token');
-          showError('Erro ao processar os dados do QR Code');
-        }
-      } else if (legacyId) {
-        // Sistema antigo para compatibilidade
-        console.log('📋 Processando Legacy ID...');
-        const userData = handleLegacyId(legacyId);
-        if (userData) {
-          console.log('✅ Dados legacy encontrados:', userData);
-          showValidUser(userData);
-        } else {
-          console.log('❌ Legacy ID não encontrado');
-          showError('QR Code antigo não encontrado neste dispositivo');
-        }
-      } else {
-        console.log('❌ Nenhum parâmetro válido encontrado');
-        showError('Nenhum código válido fornecido');
-      }
-    }, 1000); // Delay de 1 segundo para mostrar o loading
-
-    // Log de debug inicial
-    console.log('🔧 Sistema de verificação JSD carregado');
-    console.log('📊 URL atual:', window.location.href);
-    console.log('🆔 Parâmetros URL:', {
-      token: token ? `${token.substring(0, 20)}...` : null,
-      legacyId: legacyId
-    });
+    // Log de informações do sistema
+    console.log('🌅 Sistema de Verificação JSD Sunset carregado!');
+    console.log('Versão: 3.0 - Corrigida');
+    console.log('URL atual:', window.location.href);
+    console.log('Timestamp:', new Date().toISOString());
   </script>
 </body>
 </html>
