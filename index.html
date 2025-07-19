@@ -1,13 +1,16 @@
-
 <!DOCTYPE html>
 <html lang="pt">
 <head>
   <meta charset="UTF-8">
-  <title>Gerar QR Code</title>
+  <title>Gerar QR Code - Sunset JSD</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
       padding: 0;
@@ -17,91 +20,318 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
+      min-height: 100vh;
       text-align: center;
       flex-direction: column;
       padding: 20px;
     }
 
     .card {
-      background-color: rgba(255, 255, 255, 0.1);
-      border-radius: 16px;
-      padding: 30px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-      max-width: 400px;
+      background-color: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 40px 30px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+      max-width: 450px;
       width: 100%;
+      border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
     h1 {
-      font-size: 6vw;
-      margin-bottom: 20px;
+      font-size: clamp(24px, 6vw, 36px);
+      margin-bottom: 30px;
+      font-weight: 700;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
     }
 
-    label, input, button {
+    .form-group {
+      margin-bottom: 20px;
+      text-align: left;
+    }
+
+    label {
       display: block;
-      width: 100%;
-      margin-bottom: 15px;
-      font-size: 4vw;
+      margin-bottom: 8px;
+      font-weight: 600;
+      font-size: clamp(14px, 3.5vw, 16px);
     }
 
     input {
-      padding: 10px;
-      border-radius: 8px;
+      width: 100%;
+      padding: 15px;
+      border-radius: 12px;
       border: none;
+      background-color: rgba(255, 255, 255, 0.9);
+      font-size: clamp(14px, 4vw, 16px);
+      color: #333;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+      transition: all 0.3s ease;
+    }
+
+    input:focus {
+      outline: none;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.1), 0 0 0 3px rgba(255, 255, 255, 0.3);
+      transform: scale(1.02);
+    }
+
+    input::placeholder {
+      color: #666;
     }
 
     button {
-      background-color: #fff;
+      width: 100%;
+      background: linear-gradient(45deg, #fff, #f0f0f0);
       color: #ff5733;
-      padding: 12px;
+      padding: 18px;
       border: none;
-      border-radius: 8px;
+      border-radius: 12px;
       font-weight: bold;
       cursor: pointer;
+      font-size: clamp(14px, 4vw, 18px);
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(255, 255, 255, 0.3);
+      margin-top: 10px;
     }
 
-    canvas {
-      margin-top: 20px;
-      width: 50vw;
-      max-width: 250px;
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255, 255, 255, 0.4);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    #qrSection {
+      margin-top: 30px;
+      padding-top: 30px;
+      border-top: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    #qrCode {
+      background: white;
+      padding: 20px;
+      border-radius: 16px;
+      margin: 20px auto;
+      display: inline-block;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .success-message {
+      background-color: rgba(34, 197, 94, 0.2);
+      border: 2px solid rgba(34, 197, 94, 0.5);
+      padding: 15px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      font-weight: 600;
+    }
+
+    .error-message {
+      background-color: rgba(239, 68, 68, 0.2);
+      border: 2px solid rgba(239, 68, 68, 0.5);
+      padding: 15px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      font-weight: 600;
+    }
+
+    .instructions {
+      font-size: clamp(12px, 3vw, 14px);
+      margin-top: 15px;
+      opacity: 0.9;
+      line-height: 1.4;
+    }
+
+    @media (max-width: 480px) {
+      .card {
+        padding: 30px 20px;
+      }
     }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>Sunset JSD 🍹</h1>
+    <h1>🌅 Sunset JSD 🍹</h1>
+    
     <form id="formulario">
-      <input type="text" id="nome" placeholder="O teu nome" required />
-      <input type="email" id="email" placeholder="O teu email" required />
-      <button type="submit">Gerar QR Code</button>
+      <div class="form-group">
+        <label for="nome">Nome Completo</label>
+        <input type="text" id="nome" placeholder="O teu nome completo" required />
+      </div>
+      
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" placeholder="exemplo@email.com" required />
+      </div>
+      
+      <button type="submit" id="submitBtn">🎫 Gerar QR Code</button>
     </form>
-    <div id="qr" class="hidden">
-      <canvas id="canvas"></canvas>
+
+    <div id="message"></div>
+
+    <div id="qrSection" class="hidden">
+      <h2>🎉 QR Code Gerado!</h2>
+      <div id="qrCode"></div>
+      <p class="instructions">
+        💡 <strong>Guarda este QR Code!</strong><br>
+        Mostra-o no evento para resgatar a tua bebida grátis.
+      </p>
+      <button id="downloadBtn">📱 Guardar QR Code</button>
     </div>
   </div>
 
   <script>
     const formulario = document.getElementById('formulario');
-    const qrDiv = document.getElementById('qr');
-    const canvas = document.getElementById('canvas');
+    const qrSection = document.getElementById('qrSection');
+    const qrCodeDiv = document.getElementById('qrCode');
+    const messageDiv = document.getElementById('message');
+    const submitBtn = document.getElementById('submitBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+
+    // Base de dados simulada para GitHub Pages
+    // Em produção, seria melhor usar uma base de dados real
+    let participantes = {};
+    
+    // Carregar participantes existentes (se existirem)
+    try {
+      const saved = localStorage.getItem('jsd_participantes');
+      if (saved) {
+        participantes = JSON.parse(saved);
+      }
+    } catch (e) {
+      console.log('Erro ao carregar dados:', e);
+    }
+
+    function showMessage(msg, type = 'success') {
+      messageDiv.innerHTML = `<div class="${type}-message">${msg}</div>`;
+      setTimeout(() => messageDiv.innerHTML = '', 5000);
+    }
+
+    function isValidEmail(email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(email);
+    }
+
+    function generateUniqueId(email, nome) {
+      // Criar um ID mais robusto combinando email e nome
+      const timestamp = Date.now();
+      const random = Math.random().toString(36).substr(2, 9);
+      const data = `${email.toLowerCase()}_${nome}_${timestamp}_${random}`;
+      return btoa(data).replace(/[+/=]/g, '').substr(0, 16);
+    }
 
     formulario.addEventListener('submit', (e) => {
       e.preventDefault();
-      const nome = document.getElementById('nome').value;
-      const email = document.getElementById('email').value;
-      const id = btoa(email);
+      
+      const nome = document.getElementById('nome').value.trim();
+      const email = document.getElementById('email').value.trim().toLowerCase();
 
-      let inscritos = JSON.parse(localStorage.getItem('inscritos')) || {};
-      inscritos[id] = { nome, email };
-      localStorage.setItem('inscritos', JSON.stringify(inscritos));
+      // Validações
+      if (!nome || nome.length < 2) {
+        showMessage('❌ Por favor, insere um nome válido.', 'error');
+        return;
+      }
 
-      const link = `${location.origin}/verificar.html?id=${id}`;
+      if (!isValidEmail(email)) {
+        showMessage('❌ Por favor, insere um email válido.', 'error');
+        return;
+      }
 
-      QRCode.toCanvas(canvas, link, (error) => {
-        if (error) console.error(error);
-        else qrDiv.classList.remove('hidden');
-      });
+      // Verificar se já existe
+      const existingId = Object.keys(participantes).find(id => 
+        participantes[id].email === email
+      );
+
+      if (existingId) {
+        showMessage('⚠️ Este email já está registado! A gerar o teu QR Code existente...', 'success');
+        generateQRCode(existingId);
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = '⏳ A gerar...';
+
+      try {
+        // Gerar ID único
+        const id = generateUniqueId(email, nome);
+        
+        // Guardar participante
+        participantes[id] = {
+          nome: nome,
+          email: email,
+          timestamp: Date.now(),
+          usado: false
+        };
+
+        // Guardar no localStorage
+        localStorage.setItem('jsd_participantes', JSON.stringify(participantes));
+
+        generateQRCode(id);
+        showMessage('✅ QR Code gerado com sucesso!', 'success');
+        
+      } catch (error) {
+        console.error('Erro:', error);
+        showMessage('❌ Erro ao gerar QR Code. Tenta novamente.', 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '🎫 Gerar QR Code';
+      }
     });
+
+    function generateQRCode(id) {
+      const baseUrl = window.location.origin + window.location.pathname.replace('index.html', '');
+      const verifyUrl = `${baseUrl}verificar.html?id=${id}`;
+
+      // Limpar QR Code anterior
+      qrCodeDiv.innerHTML = '';
+
+      try {
+        const qr = new QRious({
+          element: document.createElement('canvas'),
+          value: verifyUrl,
+          size: 280,
+          background: 'white',
+          foreground: '#ff5733',
+          level: 'M'
+        });
+
+        qrCodeDiv.appendChild(qr.canvas);
+        qrSection.classList.remove('hidden');
+
+        // Scroll para o QR Code
+        qrSection.scrollIntoView({ behavior: 'smooth' });
+
+      } catch (error) {
+        console.error('Erro ao gerar QR:', error);
+        showMessage('❌ Erro ao gerar QR Code visual.', 'error');
+      }
+    }
+
+    // Download do QR Code
+    downloadBtn.addEventListener('click', () => {
+      const canvas = qrCodeDiv.querySelector('canvas');
+      if (canvas) {
+        const link = document.createElement('a');
+        link.download = 'qr-code-jsd.png';
+        link.href = canvas.toDataURL();
+        link.click();
+        showMessage('📱 QR Code guardado!', 'success');
+      }
+    });
+
+    // Info sobre compatibilidade
+    console.log('Sistema QR JSD carregado!');
+    console.log('Participantes registados:', Object.keys(participantes).length);
   </script>
 </body>
 </html>

@@ -2,10 +2,14 @@
 <html lang="pt">
 <head>
   <meta charset="UTF-8">
-  <title>Resgate de Bebida</title>
+  <title>Resgate de Bebida - Sunset JSD</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
       padding: 0;
@@ -15,88 +19,348 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
+      min-height: 100vh;
       text-align: center;
       flex-direction: column;
       padding: 20px;
     }
 
     .card {
-      background-color: rgba(255, 255, 255, 0.1);
-      border-radius: 16px;
-      padding: 30px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-      max-width: 400px;
+      background-color: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 40px 30px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+      max-width: 450px;
       width: 100%;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      animation: slideIn 0.5s ease-out;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .logo {
+      width: clamp(80px, 25vw, 120px);
+      height: clamp(80px, 25vw, 120px);
+      background: linear-gradient(45deg, #fff, #f0f0f0);
+      border-radius: 50%;
+      margin: 0 auto 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(30px, 8vw, 50px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.3);
     }
 
     h1 {
-      font-size: 5vw;
-      margin-bottom: 20px;
+      font-size: clamp(20px, 5vw, 28px);
+      margin-bottom: 25px;
+      font-weight: 700;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+      line-height: 1.2;
+    }
+
+    .info-section {
+      background-color: rgba(255, 255, 255, 0.1);
+      padding: 20px;
+      border-radius: 15px;
+      margin-bottom: 25px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .user-info {
+      font-size: clamp(14px, 4vw, 16px);
+      margin-bottom: 15px;
+      opacity: 0.9;
     }
 
     .btn {
-      background-color: #fff;
+      width: 100%;
+      background: linear-gradient(45deg, #fff, #f0f0f0);
       color: #ff5733;
       border: none;
-      padding: 15px 30px;
-      font-size: 4vw;
+      padding: 18px 30px;
+      font-size: clamp(16px, 4.5vw, 20px);
       font-weight: bold;
-      border-radius: 8px;
+      border-radius: 12px;
       cursor: pointer;
-      margin-top: 20px;
-      transition: background-color 0.3s;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(255, 255, 255, 0.3);
+      margin-bottom: 15px;
     }
 
-    .btn:hover {
-      background-color: #f0f0f0;
+    .btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255, 255, 255, 0.4);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .success-state {
+      background: linear-gradient(45deg, #10b981, #059669);
+      color: white;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.02); }
     }
 
     .resgatado {
-      font-size: 4.5vw;
-      font-weight: bold;
-      color: #fff;
+      background-color: rgba(34, 197, 94, 0.2);
+      border: 2px solid rgba(34, 197, 94, 0.6);
+      padding: 25px;
+      border-radius: 15px;
       margin-top: 20px;
+      animation: successPulse 0.6s ease-out;
     }
 
-    img {
-      width: 30vw;
-      max-width: 120px;
+    @keyframes successPulse {
+      0% { transform: scale(0.8); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .resgatado h2 {
+      font-size: clamp(18px, 5vw, 24px);
+      margin-bottom: 15px;
+      color: #10b981;
+    }
+
+    .resgatado p {
+      font-size: clamp(14px, 4vw, 16px);
+      margin: 0;
+      line-height: 1.4;
+    }
+
+    .error-state {
+      text-align: center;
+      padding: 40px 30px;
+    }
+
+    .error-state h1 {
+      color: #fca5a5;
+      font-size: clamp(24px, 6vw, 32px);
       margin-bottom: 20px;
+    }
+
+    .error-state p {
+      font-size: clamp(14px, 4vw, 16px);
+      opacity: 0.9;
+      line-height: 1.4;
+      margin-bottom: 25px;
+    }
+
+    .back-btn {
+      background: rgba(255, 255, 255, 0.2);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      color: white;
+    }
+
+    .back-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .timestamp {
+      font-size: clamp(11px, 3vw, 13px);
+      opacity: 0.7;
+      margin-top: 15px;
+    }
+
+    .status-indicator {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 8px;
+      background-color: #10b981;
+      animation: blink 1.5s infinite;
+    }
+
+    @keyframes blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0.3; }
+    }
+
+    @media (max-width: 480px) {
+      .card {
+        padding: 30px 20px;
+      }
+      
+      .info-section {
+        padding: 15px;
+      }
+    }
+
+    .hidden {
+      display: none;
     }
   </style>
 </head>
 <body>
-  <div class="card" id="card">
-    <img src="images.png" alt="Logo JSD">
-    <h1 id="mensagem">Olá, participante!</h1>
-    <button class="btn" id="btnResgatar">Resgatar bebida</button>
-    <div class="resgatado hidden" id="resgatadoMsg">✔️ Bebida resgatada! Mostra este ecrã ao balcão.</div>
+  <div class="card" id="mainCard">
+    <div class="logo">🍹</div>
+    <h1 id="mensagem">Carregando...</h1>
+    <div id="content"></div>
   </div>
 
   <script>
     const params = new URLSearchParams(window.location.search);
     const id = params.get('id');
     const mensagem = document.getElementById('mensagem');
-    const btn = document.getElementById('btnResgatar');
-    const resgatadoMsg = document.getElementById('resgatadoMsg');
+    const content = document.getElementById('content');
 
-    const inscritos = JSON.parse(localStorage.getItem('inscritos')) || {};
-
-    if (!id || !inscritos[id]) {
-      document.body.innerHTML = '<h1 style="font-size: 6vw;">QR Code inválido ❌</h1>';
-    } else {
-      const nome = inscritos[id].nome;
-      mensagem.innerText = `Olá ${nome}! Clica em "Resgatar bebida" e mostra este ecrã ao balcão.`;
+    // Carregar participantes
+    let participantes = {};
+    try {
+      const saved = localStorage.getItem('jsd_participantes');
+      if (saved) {
+        participantes = JSON.parse(saved);
+      }
+    } catch (e) {
+      console.error('Erro ao carregar dados:', e);
     }
 
-    btn.addEventListener('click', () => {
-      btn.remove();
-      resgatadoMsg.classList.remove('hidden');
-      resgatadoMsg.classList.add('shown');
-    });
+    function showError() {
+      document.body.innerHTML = `
+        <div class="card error-state">
+          <div class="logo">❌</div>
+          <h1>QR Code Inválido</h1>
+          <p>Este QR Code não é válido ou pode ter expirado.</p>
+          <p>Por favor, verifica o código ou gera um novo.</p>
+          <button class="btn back-btn" onclick="window.location.href='index.html'">
+            🏠 Voltar ao Início
+          </button>
+        </div>
+      `;
+    }
+
+    function formatDate(timestamp) {
+      const date = new Date(timestamp);
+      return date.toLocaleString('pt-PT', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    function showValidUser(userData) {
+      const isUsed = userData.usado === true;
+      
+      mensagem.innerHTML = `Olá ${userData.nome}! 👋`;
+      
+      content.innerHTML = `
+        <div class="info-section">
+          <div class="user-info">
+            <strong>📧 Email:</strong> ${userData.email}
+          </div>
+          <div class="user-info">
+            <strong>📅 Registado:</strong> ${formatDate(userData.timestamp)}
+          </div>
+          ${isUsed ? 
+            '<div class="user-info" style="color: #fca5a5;"><strong>⚠️ Status:</strong> Já utilizado</div>' :
+            '<div class="user-info" style="color: #10b981;"><strong>✅ Status:</strong> Válido</div>'
+          }
+        </div>
+
+        ${!isUsed ? `
+          <button class="btn" id="btnResgatar">
+            🍹 Resgatar Bebida Grátis
+          </button>
+          <p style="font-size: 14px; opacity: 0.8; margin-top: 15px;">
+            Clica no botão e mostra este ecrã ao balcão
+          </p>
+        ` : `
+          <div class="resgatado">
+            <h2>✅ Bebida Já Resgatada!</h2>
+            <p>Esta bebida já foi utilizada anteriormente.</p>
+            <div class="timestamp">
+              Utilizada em: ${userData.dataUso ? formatDate(userData.dataUso) : 'Data não disponível'}
+            </div>
+          </div>
+        `}
+      `;
+
+      // Event listener para o botão de resgate
+      const btnResgatar = document.getElementById('btnResgatar');
+      if (btnResgatar) {
+        btnResgatar.addEventListener('click', () => {
+          resgatar(id, userData);
+        });
+      }
+    }
+
+    function resgatar(userId, userData) {
+      const btnResgatar = document.getElementById('btnResgatar');
+      btnResgatar.disabled = true;
+      btnResgatar.innerHTML = '⏳ Processando...';
+
+      setTimeout(() => {
+        // Marcar como usado
+        participantes[userId].usado = true;
+        participantes[userId].dataUso = Date.now();
+        
+        try {
+          localStorage.setItem('jsd_participantes', JSON.stringify(participantes));
+        } catch (e) {
+          console.error('Erro ao guardar:', e);
+        }
+
+        // Mostrar sucesso
+        content.innerHTML = `
+          <div class="resgatado">
+            <h2><span class="status-indicator"></span>Bebida Resgatada!</h2>
+            <p><strong>🎉 Parabéns ${userData.nome}!</strong></p>
+            <p>Mostra este ecrã ao pessoal do balcão para receber a tua bebida grátis.</p>
+            <div class="timestamp">
+              Resgatada em: ${formatDate(Date.now())}
+            </div>
+          </div>
+          
+          <button class="btn back-btn" onclick="window.location.href='index.html'" style="margin-top: 20px;">
+            🏠 Voltar ao Início
+          </button>
+        `;
+
+        // Adicionar classe de sucesso ao card
+        document.getElementById('mainCard').style.background = 'linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(16, 185, 129, 0.2))';
+
+      }, 1500); // Simular processamento
+    }
+
+    // Verificar se o ID existe e é válido
+    if (!id || !participantes[id]) {
+      showError();
+    } else {
+      const userData = participantes[id];
+      showValidUser(userData);
+    }
+
+    // Debug info (apenas em desenvolvimento)
+    console.log('ID recebido:', id);
+    console.log('Participantes totais:', Object.keys(participantes).length);
+    if (id && participantes[id]) {
+      console.log('Dados do utilizador:', participantes[id]);
+    }
   </script>
 </body>
 </html>
-
-
