@@ -152,6 +152,15 @@
       line-height: 1.4;
     }
 
+    .warning-box {
+      background-color: rgba(255, 193, 7, 0.2);
+      border: 2px solid rgba(255, 193, 7, 0.6);
+      padding: 15px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+
     @media (max-width: 480px) {
       .card {
         padding: 30px 20px;
@@ -181,12 +190,19 @@
 
     <div id="qrSection" class="hidden">
       <h2>🎉 QR Code Gerado!</h2>
+      
+      <div class="warning-box">
+        ⚠️ <strong>Importante:</strong> Este QR Code funciona em qualquer dispositivo! Não precisa ser o mesmo onde foi criado.
+      </div>
+      
       <div id="qrCode"></div>
       <p class="instructions">
         💡 <strong>Guarda este QR Code!</strong><br>
-        Mostra-o no evento para resgatar a tua bebida grátis.
+        Mostra-o no evento para resgatar a tua bebida grátis.<br>
+        <small>Funciona em qualquer telemóvel ou tablet!</small>
       </p>
       <button id="downloadBtn">📱 Guardar QR Code</button>
+      <button id="testBtn" style="background: rgba(255,255,255,0.2); color: white; margin-top: 10px;">🧪 Testar QR Code</button>
     </div>
   </div>
 
@@ -197,20 +213,9 @@
     const messageDiv = document.getElementById('message');
     const submitBtn = document.getElementById('submitBtn');
     const downloadBtn = document.getElementById('downloadBtn');
+    const testBtn = document.getElementById('testBtn');
 
-    // Base de dados simulada para GitHub Pages
-    // Em produção, seria melhor usar uma base de dados real
-    let participantes = {};
-    
-    // Carregar participantes existentes (se existirem)
-    try {
-      const saved = localStorage.getItem('jsd_participantes');
-      if (saved) {
-        participantes = JSON.parse(saved);
-      }
-    } catch (e) {
-      console.log('Erro ao carregar dados:', e);
-    }
+    let currentQRUrl = '';
 
     function showMessage(msg, type = 'success') {
       messageDiv.innerHTML = `<div class="${type}-message">${msg}</div>`;
@@ -222,12 +227,19 @@
       return emailRegex.test(email);
     }
 
-    function generateUniqueId(email, nome) {
-      // ID mais simples e compatível
-      const timestamp = Date.now();
-      const emailHash = email.toLowerCase().replace(/[^a-z0-9]/g, '');
-      const nomeHash = nome.toLowerCase().replace(/[^a-z0-9]/g, '');
-      return `${emailHash}_${nomeHash}_${timestamp}`.substr(0, 32);
+    function encodeUserData(nome, email) {
+      // Criar um token que inclui os dados do utilizador
+      const userData = {
+        nome: nome,
+        email: email,
+        timestamp: Date.now(),
+        usado: false
+      };
+      
+      // Converter para Base64 (simples encoding)
+      const jsonString = JSON.stringify(userData);
+      const encoded = btoa(encodeURIComponent(jsonString));
+      return encoded;
     }
 
     formulario.addEventListener('submit', (e) => {
@@ -247,44 +259,24 @@
         return;
       }
 
-      // Verificar se já existe
-      const existingId = Object.keys(participantes).find(id => 
-        participantes[id].email === email
-      );
-
-      if (existingId) {
-        showMessage('⚠️ Este email já está registado! A gerar o teu QR Code existente...', 'success');
-        generateQRCode(existingId);
-        return;
-      }
-
       submitBtn.disabled = true;
       submitBtn.textContent = '⏳ A gerar...';
 
       try {
-        // Gerar ID único
-        const id = generateUniqueId(email, nome);
+        // Gerar token com dados
+        const token = encodeUserData(nome, email);
         
-        // Guardar participante
-        participantes[id] = {
-          nome: nome,
-          email: email,
-          timestamp: Date.now(),
-          usado: false
-        };
-
-        // Debug: mostrar dados
-        console.log('Participante criado:', id, participantes[id]);
-
-        // Guardar no localStorage
-        localStorage.setItem('jsd_participantes', JSON.stringify(participantes));
-        
-        // Verificar se foi guardado
-        const verificacao = JSON.parse(localStorage.getItem('jsd_participantes'));
-        console.log('Dados guardados:', verificacao[id]);
-
-        generateQRCode(id);
+        generateQRCode(token);
         showMessage('✅ QR Code gerado com sucesso!', 'success');
+        
+        // Também guardar localmente para histórico (opcional)
+        try {
+          let participantes = JSON.parse(localStorage.getItem('jsd_participantes') || '{}');
+          participantes[email] = { nome, email, timestamp: Date.now(), usado: false };
+          localStorage.setItem('jsd_participantes', JSON.stringify(participantes));
+        } catch (e) {
+          console.log('LocalStorage não disponível, mas QR Code funciona na mesma!');
+        }
         
       } catch (error) {
         console.error('Erro:', error);
@@ -295,13 +287,14 @@
       }
     });
 
-    function generateQRCode(id) {
-      // URL mais simples e direta
+    function generateQRCode(token) {
+      // URL que inclui todos os dados necessários
       const currentUrl = window.location.href;
       const baseUrl = currentUrl.replace('index.html', '').replace(/\/$/, '');
-      const verifyUrl = `${baseUrl}/verificar.html?id=${encodeURIComponent(id)}`;
+      const verifyUrl = `${baseUrl}/verificar.html?token=${token}`;
       
-      console.log('URL gerada:', verifyUrl); // Debug
+      currentQRUrl = verifyUrl;
+      console.log('QR URL gerada:', verifyUrl);
 
       // Limpar QR Code anterior
       qrCodeDiv.innerHTML = '';
@@ -333,16 +326,21 @@
       const canvas = qrCodeDiv.querySelector('canvas');
       if (canvas) {
         const link = document.createElement('a');
-        link.download = 'qr-code-jsd.png';
+        link.download = 'qr-code-jsd-sunset.png';
         link.href = canvas.toDataURL();
         link.click();
         showMessage('📱 QR Code guardado!', 'success');
       }
     });
 
-    // Info sobre compatibilidade
-    console.log('Sistema QR JSD carregado!');
-    console.log('Participantes registados:', Object.keys(participantes).length);
+    // Testar QR Code
+    testBtn.addEventListener('click', () => {
+      if (currentQRUrl) {
+        window.open(currentQRUrl, '_blank');
+      }
+    });
+
+    console.log('Sistema QR JSD carregado - Versão Cross-Device!');
   </script>
 </body>
 </html>

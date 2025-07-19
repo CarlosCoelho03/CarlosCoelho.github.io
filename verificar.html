@@ -199,6 +199,15 @@
       51%, 100% { opacity: 0.3; }
     }
 
+    .device-info {
+      background-color: rgba(255, 255, 255, 0.05);
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      font-size: 12px;
+      opacity: 0.8;
+    }
+
     @media (max-width: 480px) {
       .card {
         padding: 30px 20px;
@@ -223,41 +232,47 @@
 
   <script>
     const params = new URLSearchParams(window.location.search);
-    const id = params.get('id');
+    const token = params.get('token');
+    const legacyId = params.get('id'); // Para compatibilidade com QR Codes antigos
+    
     const mensagem = document.getElementById('mensagem');
     const content = document.getElementById('content');
 
-    // Carregar participantes
-    let participantes = {};
-    try {
-      const saved = localStorage.getItem('jsd_participantes');
-      if (saved) {
-        participantes = JSON.parse(saved);
-      }
-    } catch (e) {
-      console.error('Erro ao carregar dados:', e);
-    }
-
-    function showError() {
+    function showError(errorMsg = 'QR Code inválido ou expirado') {
       document.body.innerHTML = `
         <div class="card error-state">
           <div class="logo">❌</div>
           <h1>QR Code Inválido</h1>
-          <p>Este QR Code não é válido ou pode ter expirado.</p>
-          <p><strong>ID procurado:</strong> ${id || 'Nenhum'}</p>
-          <p><strong>Participantes registados:</strong> ${Object.keys(participantes).length}</p>
-          <details style="margin: 20px 0; text-align: left;">
-            <summary>🔍 Debug Info (clica para ver)</summary>
-            <pre style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; font-size: 12px; overflow-x: auto;">
-ID: ${id}
-IDs disponíveis: ${JSON.stringify(Object.keys(participantes), null, 2)}
-            </pre>
-          </details>
+          <p>${errorMsg}</p>
+          <p>Por favor, gera um novo QR Code ou verifica se não foi modificado.</p>
           <button class="btn back-btn" onclick="window.location.href='index.html'">
-            🏠 Voltar ao Início
+            🏠 Gerar Novo QR Code
           </button>
+          <div class="device-info">
+            <strong>Info técnica:</strong><br>
+            Token: ${token ? token.substring(0, 20) + '...' : 'Nenhum'}<br>
+            User Agent: ${navigator.userAgent.substring(0, 50)}...
+          </div>
         </div>
       `;
+    }
+
+    function decodeUserData(token) {
+      try {
+        const decoded = atob(token);
+        const jsonString = decodeURIComponent(decoded);
+        const userData = JSON.parse(jsonString);
+        
+        // Verificar se tem os campos necessários
+        if (!userData.nome || !userData.email || !userData.timestamp) {
+          throw new Error('Dados inválidos no token');
+        }
+        
+        return userData;
+      } catch (error) {
+        console.error('Erro ao decodificar token:', error);
+        return null;
+      }
     }
 
     function formatDate(timestamp) {
@@ -271,8 +286,31 @@ IDs disponíveis: ${JSON.stringify(Object.keys(participantes), null, 2)}
       });
     }
 
+    function checkIfUsed(email) {
+      // Verificar se já foi usado (localStorage como cache local)
+      try {
+        const usedTokens = JSON.parse(localStorage.getItem('jsd_used_tokens') || '{}');
+        return usedTokens[email] || false;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function markAsUsed(email) {
+      try {
+        const usedTokens = JSON.parse(localStorage.getItem('jsd_used_tokens') || '{}');
+        usedTokens[email] = {
+          timestamp: Date.now(),
+          usado: true
+        };
+        localStorage.setItem('jsd_used_tokens', JSON.stringify(usedTokens));
+      } catch (e) {
+        console.log('Não foi possível marcar como usado localmente');
+      }
+    }
+
     function showValidUser(userData) {
-      const isUsed = userData.usado === true;
+      const isUsed = checkIfUsed(userData.email);
       
       mensagem.innerHTML = `Olá ${userData.nome}! 👋`;
       
@@ -284,9 +322,12 @@ IDs disponíveis: ${JSON.stringify(Object.keys(participantes), null, 2)}
           <div class="user-info">
             <strong>📅 Registado:</strong> ${formatDate(userData.timestamp)}
           </div>
+          <div class="user-info">
+            <strong>📱 Dispositivo:</strong> ${/Mobile|Android|iPhone/.test(navigator.userAgent) ? 'Mobile' : 'Desktop'}
+          </div>
           ${isUsed ? 
             '<div class="user-info" style="color: #fca5a5;"><strong>⚠️ Status:</strong> Já utilizado</div>' :
-            '<div class="user-info" style="color: #10b981;"><strong>✅ Status:</strong> Válido</div>'
+            '<div class="user-info" style="color: #10b981;"><strong>✅ Status:</strong> Válido para resgate</div>'
           }
         </div>
 
@@ -295,15 +336,13 @@ IDs disponíveis: ${JSON.stringify(Object.keys(participantes), null, 2)}
             🍹 Resgatar Bebida Grátis
           </button>
           <p style="font-size: 14px; opacity: 0.8; margin-top: 15px;">
-            Clica no botão e mostra este ecrã ao balcão
+            ✨ Clica no botão e mostra este ecrã laranja ao pessoal do balcão
           </p>
         ` : `
           <div class="resgatado">
             <h2>✅ Bebida Já Resgatada!</h2>
-            <p>Esta bebida já foi utilizada anteriormente.</p>
-            <div class="timestamp">
-              Utilizada em: ${userData.dataUso ? formatDate(userData.dataUso) : 'Data não disponível'}
-            </div>
+            <p>Esta bebida já foi utilizada anteriormente neste dispositivo.</p>
+            <p><small>Se achás que isto é um erro, fala connosco no evento.</small></p>
           </div>
         `}
       `;
@@ -312,35 +351,28 @@ IDs disponíveis: ${JSON.stringify(Object.keys(participantes), null, 2)}
       const btnResgatar = document.getElementById('btnResgatar');
       if (btnResgatar) {
         btnResgatar.addEventListener('click', () => {
-          resgatar(id, userData);
+          resgatar(userData);
         });
       }
     }
 
-    function resgatar(userId, userData) {
+    function resgatar(userData) {
       const btnResgatar = document.getElementById('btnResgatar');
       btnResgatar.disabled = true;
       btnResgatar.innerHTML = '⏳ Processando...';
 
       setTimeout(() => {
         // Marcar como usado
-        participantes[userId].usado = true;
-        participantes[userId].dataUso = Date.now();
-        
-        try {
-          localStorage.setItem('jsd_participantes', JSON.stringify(participantes));
-        } catch (e) {
-          console.error('Erro ao guardar:', e);
-        }
+        markAsUsed(userData.email);
 
         // Mostrar sucesso
         content.innerHTML = `
           <div class="resgatado">
             <h2><span class="status-indicator"></span>Bebida Resgatada!</h2>
             <p><strong>🎉 Parabéns ${userData.nome}!</strong></p>
-            <p>Mostra este ecrã ao pessoal do balcão para receber a tua bebida grátis.</p>
+            <p>Mostra este ecrã laranja ao pessoal do balcão para receber a tua bebida grátis do Sunset JSD!</p>
             <div class="timestamp">
-              Resgatada em: ${formatDate(Date.now())}
+              ✅ Resgatada em: ${formatDate(Date.now())}
             </div>
           </div>
           
@@ -349,34 +381,49 @@ IDs disponíveis: ${JSON.stringify(Object.keys(participantes), null, 2)}
           </button>
         `;
 
-        // Adicionar classe de sucesso ao card
-        document.getElementById('mainCard').style.background = 'linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(16, 185, 129, 0.2))';
+        // Adicionar efeito visual de sucesso
+        document.getElementById('mainCard').style.background = 'linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(16, 185, 129, 0.3))';
+        document.getElementById('mainCard').style.borderColor = 'rgba(34, 197, 94, 0.5)';
 
-      }, 1500); // Simular processamento
+      }, 1500);
     }
 
-    // Verificar se o ID existe e é válido
-    console.log('ID recebido:', id);
-    console.log('Todos os participantes:', participantes);
-    
-    if (!id) {
-      console.log('Nenhum ID fornecido');
-      showError();
-    } else if (!participantes[id]) {
-      console.log('ID não encontrado nos participantes');
-      console.log('IDs disponíveis:', Object.keys(participantes));
-      showError();
+    // Suporte para QR codes antigos (compatibilidade)
+    function handleLegacyId(id) {
+      try {
+        const participantes = JSON.parse(localStorage.getItem('jsd_participantes') || '{}');
+        if (participantes[id]) {
+          return participantes[id];
+        }
+      } catch (e) {
+        console.log('Dados legados não encontrados');
+      }
+      return null;
+    }
+
+    // Processar o QR Code
+    console.log('Token recebido:', token);
+    console.log('Legacy ID:', legacyId);
+
+    if (token) {
+      // Novo sistema baseado em token
+      const userData = decodeUserData(token);
+      if (userData) {
+        console.log('Dados decodificados:', userData);
+        showValidUser(userData);
+      } else {
+        showError('Erro ao processar os dados do QR Code');
+      }
+    } else if (legacyId) {
+      // Sistema antigo para compatibilidade
+      const userData = handleLegacyId(legacyId);
+      if (userData) {
+        showValidUser(userData);
+      } else {
+        showError('QR Code antigo não encontrado neste dispositivo');
+      }
     } else {
-      const userData = participantes[id];
-      console.log('Utilizador encontrado:', userData);
-      showValidUser(userData);
-    }
-
-    // Debug info (apenas em desenvolvimento)
-    console.log('ID recebido:', id);
-    console.log('Participantes totais:', Object.keys(participantes).length);
-    if (id && participantes[id]) {
-      console.log('Dados do utilizador:', participantes[id]);
+      showError('Nenhum código válido fornecido');
     }
   </script>
 </body>
